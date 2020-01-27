@@ -49,7 +49,7 @@ cut_wnoise = trim_wnoise(wnoise, cut_length)
 
 # Then normalize it
 # center at zero
-cut_wnoise -= np.mean(cut_wnoise.flatten())
+# cut_wnoise -= np.mean(cut_wnoise.flatten())
 # give a mean of zero
 cut_wnoise /=  np.std(cut_wnoise.flatten())
 
@@ -64,12 +64,13 @@ print("     - New cube mean: {:.5f}".format(np.mean(cut_wnoise.flatten())))
 print("     - New cube std: {:.5f}".format(np.std(cut_wnoise.flatten())))
 
 # Plot the white noise to validate its properties
+# the plot name will be based on the white noise file name
 print(" - Plotting white noise histogram")
-dirname = os.path.dirname(wnoise_file_loc).split(os.sep)[-1]
+plot_base = ".".join(os.path.basename(wnoise_file_loc).split(".")[:-1])
 if base_level != central_power:
-    savename = "./plots/" + dirname + "_level_{:02d}_trim_{:02d}.png".format(base_level, central_power)
+    savename = "../plots/" + plot_base + "_readlevel_{:02d}_trim_{:02d}.png".format(base_level, central_power)
 else:
-    savename = "./plots/" + dirname + "_level_{:02d}.png".format(base_level)
+    savename = "../plots/" + plot_base + "_readlevel_{:02d}.png".format(base_level)
 savename = os.path.abspath(savename)
 print("     - Will be saved to " + savename)
 
@@ -80,9 +81,12 @@ ax.easy_add_text("White Noise\n$\sigma$ = {:.2f}\nmean = {:.2f}".format(np.std(c
 ax.add_labels("Value", "Relative Frequency")
 fig.savefig(savename)
 
-# Then write the white noise to the file
-# The filename will be the dirname with the level appended
-out_filename = "./" + dirname + "_level_{:02d}.dat".format(central_power) 
+# Then write the white noise to the file. 
+# We need to get the new name for the file, based on the new size
+cut_ratio = 2**(base_level - central_power)
+old_length = float(plot_base.split("_")[1])
+new_length = old_length / cut_ratio
+out_filename = "./trimmed_" + plot_base + "_readlevel_{:02d}_trim_length_{:.1f}mpc_trimlevel_{:02d}.dat".format(base_level, new_length, central_power) 
 out_filename = os.path.abspath(out_filename)
 print(" - Writing white noise to " + out_filename)
 
