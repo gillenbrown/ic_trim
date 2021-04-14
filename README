@@ -1,0 +1,28 @@
+Naming convention for files:
+{type}_{size}_mpc_level_{level}_{filetype}
+
+Where "size" is the box length in Mpc and "level" is the level of the root grid
+
+type is one of the following:
+original - ones made with the original TL IC file, at any root grid level
+root - root grids reconstructed from trimmed white noise cubes from "original"
+hybrid - the zoom particles from "original" and the root grid from "root"
+
+and "filetype" is either "hdf5" or "ART". These should be identical with everything other than the output format.
+
+"wnoise" is the IC that matches "original_50_mpc_level_10_hdf5", just made with the modified version of MUSIC so that is contains the white noise, rather than DM overdensity
+
+Ones with "offset" in the name do NOT have the corrected velocity shift. These are not to be used.
+
+
+Process
+-------
+Here I start with the original IC. I generate it with the original root grid, and with a root grid increased to level 10. I visualize these outputs, and they are the same. There is a slight offset between the two, even though the structures are the same. I suspect (but don't know) that this is due to the different root grids. The refined region is centered using the root grid, so different root grids will locate it at a slightly different integer value. But regardless, the structures are reproduced, so this level 10 original is reliable. (On a side note, the slight offset means that when combining ICs later, I need to take the refined particles from the level 10 IC, so that there is no offset between the refined and root grid particles).
+
+The next step is to run the exact same setup through the hacked MUSIC version to create the white noise. I then trim this white noise using `trim_wnoise.py` in my `ic_trim` repository. I create several versions of white noise. The output HDF5 files have the white noise values at each level. So I use that to generate the trimmed white noise cube at different resolutions. For each of them I trim by a factor of 4 (so 2 levels). So for example, I read the level 10 white noise, then cut the center out to select the central cube with side length 2^8. I do this for several other resolutions for testing purposes (10->8, 9->7, 8->6, 7->5). 
+
+I then feed these white noise cubes into the regular version of MUSIC to create the trimmed ICs. These are passed in at the level matching the root grid (i.e. the 7->5 white noise is fed in as the white noise for level 5 for an IC with a root grid size of 2^5). The box size needs to decrease by a factor of 4. Additionally, the region file for the refined region is not needed, since we just need to generate the root grid. The use of the refined region in the original version means that the white noise is already centered on the region of interest. I then run unmodified MUSIC on these to get a trimmed IC. I run MUSIC twice to get an HDF5 version (for easier visualization) and an ART one (which I can then use to combine the particles).
+
+Code to use when doing this process
+-----------------------------------
+
