@@ -6,7 +6,7 @@ import numpy as np
 from tqdm import tqdm as tqdm
 
 import betterplotlib as bpl
-bpl.presentation_style()
+bpl.set_style()
 
 # This code takes 4 command line arguments, all directories. In order, they are:
 # 1 - Directory containing the initial condition files (in ART format) that has

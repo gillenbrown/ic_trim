@@ -4,7 +4,7 @@ import h5py
 import numpy as np
 import struct
 import betterplotlib as bpl
-bpl.presentation_style()
+bpl.set_style()
 
 # parse the command line arguments
 wnoise_file_loc = os.path.abspath(sys.argv[1])
@@ -20,7 +20,7 @@ if len(sys.argv) > 4:
 
 print(" - Reading white noise cube")
 # Read the DM density at the level requested
-hf = h5py.File(wnoise_file_loc)
+hf = h5py.File(wnoise_file_loc, "r")
 wnoise = np.array(hf['level_{:03d}_DM_rho'.format(base_level)])
 hf.close()
 
@@ -68,9 +68,9 @@ print("     - New cube std: {:.5f}".format(np.std(cut_wnoise.flatten())))
 print(" - Plotting white noise histogram")
 plot_base = ".".join(os.path.basename(wnoise_file_loc).split(".")[:-1])
 if base_level != central_power:
-    savename = "../plots/" + plot_base + "_readlevel_{:02d}_trim_{:02d}.png".format(base_level, central_power)
+    savename = "../plots/" + plot_base + "_readlevel{:02d}_trim{:02d}.png".format(base_level, central_power)
 else:
-    savename = "../plots/" + plot_base + "_readlevel_{:02d}.png".format(base_level)
+    savename = "../plots/" + plot_base + "_readlevel{:02d}.png".format(base_level)
 savename = os.path.abspath(savename)
 print("     - Will be saved to " + savename)
 
@@ -84,9 +84,9 @@ fig.savefig(savename)
 # Then write the white noise to the file. 
 # We need to get the new name for the file, based on the new size
 cut_ratio = 2**(base_level - central_power)
-old_length = float(plot_base.split("_")[1])
+old_length = float(plot_base.split("_")[1].replace("mpc", ""))
 new_length = old_length / cut_ratio
-out_filename = "./trimmed_" + plot_base + "_readlevel_{:02d}_trim_length_{:.1f}mpc_trimlevel_{:02d}.dat".format(base_level, new_length, central_power) 
+out_filename = "./trimmed_" + plot_base + "_readlevel{:02d}_trimlength{:.2f}mpc_trimlevel{:02d}.dat".format(base_level, new_length, central_power) 
 out_filename = os.path.abspath(out_filename)
 print(" - Writing white noise to " + out_filename)
 

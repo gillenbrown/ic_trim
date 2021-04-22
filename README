@@ -1,10 +1,10 @@
 Naming convention for files:
-{type}_{size}_mpc_level_{level}_{filetype}
+{type}_{size}mpc_level{level}_{filetype}
 
 Where "size" is the box length in Mpc and "level" is the level of the root grid
 
 type is one of the following:
-original - ones made with the original TL IC file, at any root grid level
+original - ones made with the original IC file, at any root grid level
 root - root grids reconstructed from trimmed white noise cubes from "original"
 hybrid - the zoom particles from "original" and the root grid from "root"
 
@@ -17,7 +17,7 @@ Ones with "offset" in the name do NOT have the corrected velocity shift. These a
 
 Process
 -------
-Here I start with the original IC. I generate it with the original root grid, and with a root grid increased to level 10. I visualize these outputs, and they are the same. There is a slight offset between the two, even though the structures are the same. I suspect (but don't know) that this is due to the different root grids. The refined region is centered using the root grid, so different root grids will locate it at a slightly different integer value. But regardless, the structures are reproduced, so this level 10 original is reliable. (On a side note, the slight offset means that when combining ICs later, I need to take the refined particles from the level 10 IC, so that there is no offset between the refined and root grid particles).
+Here I start with the original IC. I generate it with the original root grid, and with a root grid increased to level 10. I visualize these outputs, and they are the same. There is a slight offset between the two, even though the structures are the same. I suspect (but don't know) that this is due to the different root grids. The refined region is centered using the root grid, so different root grids will locate it at a slightly different integer value. But regardless, the structures are reproduced, so this level 10 original is reliable. (On a side note, the slight offset means that when combining ICs later, I need to know the offset between this IC and the original. I want to take particles from the original, since I can get the level matching the new root level, to extend the region where the original is copied, but to do this I need to know the offset. I can get that by comparing the two versions of the original IC).
 
 The next step is to run the exact same setup through the hacked MUSIC version to create the white noise. I then trim this white noise using `trim_wnoise.py` in my `ic_trim` repository. I create several versions of white noise. The output HDF5 files have the white noise values at each level. So I use that to generate the trimmed white noise cube at different resolutions. For each of them I trim by a factor of 4 (so 2 levels). So for example, I read the level 10 white noise, then cut the center out to select the central cube with side length 2^8. I do this for several other resolutions for testing purposes (10->8, 9->7, 8->6, 7->5). 
 
@@ -25,4 +25,55 @@ I then feed these white noise cubes into the regular version of MUSIC to create 
 
 Code to use when doing this process
 -----------------------------------
+- Take the original IC's conf file. Run unmodified MUSIC on that. `music original.conf`
+- Generate original ICs at different root refinement levels. These are needed to take zoom particles from
+    - Create new folder
+    - Copy the conf files from the original, renaming it to reflect the change in level
+    - In the conf file, adjust levelmin
+    - In the conf file, rename the output file to reflect the change in level.
+    - Run unmodified MUSIC on this conf file. 
+    - Generate in ART format, and hdf5 optionally (will not be used, only to check structures)
+- Create the white noise cubes. These will be used to see structures later.
+    - create a new folder named "wnoise_{original_size}mpc_level{level matching refined version above}_hdf5"
+    - copy the conf file from the original IC at the more refined root level. Name it to match this folder name.
+    - adjust the output file format to be hdf5
+    - make sure the output name matches this folder's name
+    - run this config through the hacked MUSIC (hacked MUSIC is essential!)
+- Trim the white noise cube
+    - Go to the white noise directory just created.
+    - Run the script: python trim_wnoise.py name_of_white_noise_output.hdf5 level_untrimmed level_trimmed
+        - Here level_untrimmed is the root level in the original file (the level in the filename)
+        - level_trimmed is the desired level of the trimmed grid.
+    - this will produce a new .dat file in this directory
+- Create the new root grid
+    - create a new directory named "root_{new_size}mpc_level{new root grid level}_art"
+    - Copy the conf file from the original over, renaming it appropriately
+    - Make the following changes to the config file:
+        - boxlength: change it to the new length
+        - levelmin: change to the new root grid size
+        - levelmin_TF: change to match levelmin
+        - levelmax: change to match levelmin. This is because we're making the root grid only, no refined region
+        - comment out the refined region attributes: region, region_point_file, region_point_file_shift, region_point_levelmin
+        - For the seed of the new root grid, pass the filename of the trimmed .dat file created in the previous step. Note that this file can be used for runs with and without baryons. 
+        - Remove all other seeds, as they are not needed, since we have no refined region.
+        - I think I can remove the cubesize attribute
+        - adjust the filename of the output: original to root, box size, and level
+    - run regular MUSIC using this config file. (this should be fast)
+- Combine the root grid with the refined region
+    - create a new directory named hybrid_{new_size}mpc_level{new root grid level}.ics
+    - Run my code: python make_hybrid.py {root_grid_dir from last main step} {original_dir} {original_different_res_dir} {new_hybrid_dir just created}
+        - Note the difference between the two originals. The first is the true original. The second is the original IC with the same root grid as was used to create the trimmed root grid. In other words, I generated the true original IC (this is the first original in the params above). I also generated the original at higher root grid resolution. Pass the version that has the same root grid size as the white noise cube (original white noise cube, not the trimmed version).  
+
+
+
+- I will do 2 versions of this whole thing. One for with baryons, and one without.
+    - Rename folders and files to reflect that they contain baryons.
+    - In the conf file, switch the baryons flag on.
+    - In the conf file, rename the output format. 
+
+- Notes on debug plots
+    - plot_ic.py shows slices through a given IC in density, velocity, displacement. The input IC needs to be in hdf5 format.
+
+
+
 
